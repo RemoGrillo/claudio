@@ -18,6 +18,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 highlight;   // alpha 0 = no highlight
     float numColors;  // 2, 3 or 4
     vec4 hole;        // window that must stay above the glow (KRunner): x, y, width, height; width 0 = none
+    float trace;      // 0 → 1 while Claudio appears: the glow draws itself along the edge
 };
 
 vec3 hue(float i) {
@@ -49,6 +50,11 @@ void main() {
     else if (p.y > hi.y && p.x > lo.x) s = box.z + box.w + (q.x - lo.x);
     else s = box.z + (q.y - lo.y);
     float u = s / (2.0 * box.z + box.w);
+
+    // appearing: the glow advances along the edge (top, left side, bottom) behind a bright head
+    float head = trace * 1.2;
+    float traced = 1.0 - smoothstep(head - 0.2, head, u);
+    float spark = exp(-pow((u - head + 0.05) / 0.035, 2.0)) * (1.0 - trace);
 
     // organic blend: every colour is a wide patch along the edge overlapping its neighbours; the edge is "stretched"
     // by slow waves and every patch drifts at its own pace, so there are no hard sections
@@ -83,6 +89,8 @@ void main() {
     float a = (0.46 * exp(-dd / 3.2) + 0.15 * exp(-dd / 8.0)) * breath * (1.0 + sheen * 0.6);
     // fade to zero before the edge of the window (margin = box.x), so no step shows
     a *= 1.0 - smoothstep(box.x * 0.55, box.x * 0.95, d);
+    col = mix(col, vec3(1.0), clamp(spark, 0.0, 1.0) * 0.6);
+    a *= traced + spark * 1.5;
     a = clamp(a, 0.0, 0.75);
     // no glow over KRunner: there the glow "goes under" its window
     if (hole.z > 0.0)

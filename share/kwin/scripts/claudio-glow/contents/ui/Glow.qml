@@ -44,7 +44,41 @@ PlasmaCore.Dialog {
         onTriggered: glow.readColors()
     }
 
+    // The glow traces itself along the edge while Claudio appears, in the same time as the reveal effect
+    // (claudio_reveal): the duration is read from kwinrc the way main.js computes it (DURATIONS / Speed, or DurationIn).
+    property real trace: 1
+    property Settings kwin: Settings {
+        location: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/kwinrc"
+        category: "Effect-claudio_reveal"
+    }
+    property Settings kdeglobals: Settings {
+        location: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/kdeglobals"
+        category: "KDE"
+    }
+    function revealDuration() {
+        kwin.sync();
+        kdeglobals.sync();
+        let ms = Number(kwin.value("DurationIn", 0)) || 0;
+        if (ms <= 0) {
+            const base = { glitch: 300, decrypt: 650, scan: 520, slide: 220, none: 0 };
+            const e = String(kwin.value("Effect", "glitch")).trim().toLowerCase();
+            const speed = Math.max(0.1, Number(kwin.value("Speed", 1.0)) || 1.0);
+            ms = (e in base ? base[e] : 300) / speed;
+        }
+        const factor = Number(kdeglobals.value("AnimationDurationFactor", 1));
+        return Math.max(150, ms * (isNaN(factor) ? 1 : factor));
+    }
+    property NumberAnimation traceAnimation: NumberAnimation {
+        target: glow; property: "trace"; from: 0; to: 1
+        easing.type: Easing.InOutSine
+    }
+
     function showAround(g) {
+        if (!visible || content.opacity === 0) {
+            traceAnimation.duration = revealDuration();
+            trace = 0;
+            traceAnimation.restart();
+        }
         // on the right the sidebar touches the edge of the screen: no margin there
         x = g.x - margin;
         y = g.y - margin;
@@ -99,6 +133,7 @@ PlasmaCore.Dialog {
             property vector4d hole: Qt.vector4d(glow.screenHole.x - glow.x, glow.screenHole.y - glow.y,
                                                 glow.screenHole.width, glow.screenHole.height)
             property color highlight: glow.highlight
+            property real trace: glow.trace
             fragmentShader: Qt.resolvedUrl("glow.frag.qsb?v=" + Date.now())
             NumberAnimation on time {
                 from: 0; to: 3600; duration: 3600 * 1000

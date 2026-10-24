@@ -57,6 +57,9 @@ No network calls of its own, no API keys: usage figures come from the data Claud
   </tr>
 </table>
 
+Nothing is there before the effect starts: the frosted blur behind Claudio fades in with the content, and the glow
+traces itself along the edge, from the top right corner round to the bottom, in step with the reveal.
+
 <sub>Recorded slowed down so you can see what happens; the real thing takes 0.3 to 0.65 seconds
 (adjustable). There are also <b>slide</b>, a clean slide in from the edge, and <b>none</b>.</sub>
 

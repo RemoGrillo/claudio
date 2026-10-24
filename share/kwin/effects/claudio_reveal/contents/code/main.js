@@ -79,9 +79,15 @@ class ClaudioReveal {
         if (shader !== undefined) {
             uniform(shader, "uForOpening", opening ? 1.0 : 0.0);
             uniform(shader, "uSeed", Math.random());
+            // opacity leaves the content alone (the shader ignores it) but drives the blur behind the window (KWin's blur or
+            // Better Blur DX): the frosted background arrives together with the content instead of being there from frame one
             return animate({
                 window: w, duration: duration, curve: QEasingCurve.Linear,
-                animations: [{ type: Effect.ShaderUniform, fragmentShader: shader, uniform: "uProgress", from: 0.0, to: 1.0 }]
+                animations: [
+                    { type: Effect.ShaderUniform, fragmentShader: shader, uniform: "uProgress", from: 0.0, to: 1.0 },
+                    { type: Effect.Opacity, from: opening ? 0.0 : 1.0, to: opening ? 1.0 : 0.0,
+                      curve: opening ? QEasingCurve.InQuad : QEasingCurve.OutQuad }
+                ]
             });
         }
         return null;   // none
