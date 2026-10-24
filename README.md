@@ -4,8 +4,9 @@
 
 # Claudio
 
-**Claude Code in a sidebar for KDE Plasma.**
-One key and it glitches into view at the right edge of your screen, over whatever you are doing, on every virtual desktop.
+**Claude Code, woven into your Linux desktop.**<br>
+One key and it's ready for action: Claude glitches into view at the edge of your screen,
+over whatever you're doing, on every virtual desktop. Press it again and it's gone.
 
 [![AUR](https://img.shields.io/aur/version/claudio?logo=archlinux&label=AUR)](https://aur.archlinux.org/packages/claudio)
 ![KDE Plasma 6](https://img.shields.io/badge/KDE%20Plasma-6-1d99f3?logo=kde)
@@ -19,17 +20,30 @@ One key and it glitches into view at the right edge of your screen, over whateve
 
 ## What it is
 
-Claudio is a [Ghostty](https://ghostty.org) quick terminal running [Claude Code](https://code.claude.com/docs),
-dressed up to feel like part of the desktop:
+Claudio is an instant interface to [Claude Code](https://code.claude.com/docs) that turns it into **your personal Linux
+assistant**, built right into KDE Plasma instead of living in a terminal you have to go and find.
+
+No terminal to open, no `cd`, no `claude` to type, no window to arrange. Press <kbd>Meta</kbd>+<kbd>C</kbd> (or the Copilot
+key) and Claude is already there, floating over your work, ready to fix a config file, find out why a service won't start,
+explain a log, write a script or tidy up your Downloads folder. Press the key again and it steps aside, still running,
+with every conversation exactly where you left it.
+
+Juggling several things at once? Open a **tab per task**: each one is its own Claude Code session, named after its
+conversation, so one can refactor a project while another sorts out your printer. The tray icon tells you which ones are still
+working and pings you when a long job is done.
 
 - **Always one key away.** <kbd>Meta</kbd>+<kbd>C</kbd>, the **Copilot key** on new laptops, or a click on the tray icon.
-  It stays running in the background, so your chats are still there when you bring it back.
+  It lives in the background, on every virtual desktop, above every window.
+- **Many chats, one place.** <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> for a new chat, <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd>
+  to jump between them; tabs are titled automatically by Claude Code.
+- **Feels native.** Frosted glass, rounded corners and an animated glow in your own colours, so it looks like part of Plasma,
+  not a terminal that wandered in.
 - **Reveal effects.** A KWin effect draws how it appears and disappears: **glitch**, **decrypt**, **scan**, a plain **slide**, or nothing.
-- **Animated glow.** A soft halo flows around the sidebar in 2 to 4 colours of your choice.
-- **Several chats at once.** One Claude Code chat per tab; each tab is titled after its conversation.
-- **Usage at a glance.** A tray icon shows how much of your 5-hour Claude window you have used and the minutes until it resets.
-  It pulses while a chat is working, and you get a notification when a long job is done.
-- **Frosted glass.** Rounded corners and a translucent background, blurred by KWin.
+- **Usage at a glance.** A tray icon shows how much of your 5-hour Claude window you've used and the minutes until it resets,
+  and pulses while Claude is working.
+
+Under the hood it's a [Ghostty](https://ghostty.org) quick terminal running Claude Code, with a KWin effect, a KWin script and a
+small tray app around it. Made on Arch Linux, for any distro with Plasma 6 on Wayland.
 
 No network calls of its own, no API keys: usage figures come from the data Claude Code already passes to its status line.
 

@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Claudio
-GenericName=Claude Code sidebar
-Comment=Claude Code in a sidebar that slides out of the edge of the screen
+GenericName=Claude Code assistant
+Comment=Claude Code, one key away: your Linux assistant built into the desktop
 Keywords=Claude;Claudio;sidebar;AI;assistant;
 Icon=io.github.remogrillo.claudio
 Exec=claudio

@@ -1,5 +1,5 @@
 pkgbase = claudio
-	pkgdesc = Claude Code in a sidebar for KDE Plasma: Ghostty quick terminal with reveal effects, animated glow and a usage tray icon
+	pkgdesc = Claude Code woven into the KDE Plasma desktop: one key and your Linux assistant is ready, with tabs, reveal effects and a usage tray icon
 	pkgver = 0.1.0
 	pkgrel = 1
 	url = https://github.com/RemoGrillo/claudio
