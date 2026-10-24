@@ -35,7 +35,8 @@ $(GLOW)/contents/ui/glow.frag.qsb: $(GLOW)/contents/ui/glow.frag
 install: all
 	install -Dm755 $(BIN) -t $(DESTDIR)$(PREFIX)/bin
 	install -Dm755 noslide/noslide.so -t $(DESTDIR)$(PREFIX)/lib/claudio
-	install -Dm644 share/claudio/colors.conf -t $(DATA)/claudio
+	install -Dm644 share/claudio/colors.conf share/claudio/themes.json -t $(DATA)/claudio
+	install -Dm644 share/claudio/colors/ColorEditor.qml -t $(DATA)/claudio/colors
 	install -Dm644 share/claudio/ghostty/claudio.conf share/claudio/ghostty/claudio.css -t $(DATA)/claudio/ghostty
 	install -Dm644 share/applications/io.github.remogrillo.claudio.desktop -t $(DATA)/applications
 	install -Dm644 share/icons/hicolor/scalable/apps/io.github.remogrillo.claudio.svg -t $(DATA)/icons/hicolor/scalable/apps
@@ -55,7 +56,7 @@ uninstall:
 	       $(DATA)/kwin/effects/claudio_reveal $(DATA)/kwin/scripts/claudio-glow
 
 check:
-	bash -n bin/claudio bin/claudio-tab bin/claudio-toggle bin/claudio-effect
+	bash -n bin/claudio bin/claudio-tab bin/claudio-toggle bin/claudio-effect bin/claudio-colors
 	python3 -m py_compile bin/claudio-tray bin/claudio-hook bin/claudio-statusline bin/claudio-copilot-key bin/claudio-setup
 
 clean:

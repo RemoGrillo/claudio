@@ -1,0 +1,5 @@
+{
+  "aurora": {"name": "Aurora", "colors": ["#2fb4ff", "#ff8a2b", "#e1306c", "#fd1d1d"], "highlight": ""},
+  "nebula": {"name": "Nebula", "colors": ["#8b5cf6", "#3b82f6", "#22d3ee", "#e879f9"], "highlight": "#ffffff"},
+  "ember": {"name": "Ember", "colors": ["#ff5e3a", "#ffb347", "#ff2e63"], "highlight": "#fff3d6"}
+}

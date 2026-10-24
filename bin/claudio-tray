@@ -3,14 +3,13 @@
 # is used. It only reads ~/.cache/claudio/usage.json, written by the Claude Code status line (claudio-statusline):
 # no network calls.
 # It is also Claudio's button (KDE): left click = show/hide (claudio-toggle), middle click = notification with the
-# details, right click = settings menu (SETTINGS below: reveal effect, speed, …; add entries there). The number
+# details, right click = menu (Tray.menu_layout: reveal animation, glow and colour themes). The number
 # glows while a Claudio chat is working (state from ~/.cache/claudio/sessions.json, written by the Claude Code
 # hooks through claudio-hook).
 import configparser
 import json
 import math
 import os
-import shutil
 import signal
 import subprocess
 import time
@@ -115,39 +114,117 @@ def pulse(colors):
 
 
 # ---- right-click menu (com.canonical.dbusmenu) ----
-# Every setting is a submenu of radio choices. "read" returns the current value (string), "write" sets it.
-# To add one, add an entry to SETTINGS (or an action to the list passed to Menu).
+# The menu is described by Tray.menu_layout() and rebuilt from the current settings whenever it opens or changes.
+# Plasma's dbusmenu client puts every radio item in a group of its own, so it does not make them mutually exclusive by
+# itself: the menu has to send every changed toggle-state (ItemsPropertiesUpdated) and AboutToShow always asks Plasma to
+# refetch the submenu, otherwise the previously selected choice stays ticked next to the new one.
 EFFECT = os.path.join(HERE, "claudio-effect")
+COLOR_EDITOR = os.path.join(HERE, "claudio-colors")
 KWINRC = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "kwinrc")
+THEMES = os.path.join(SHARE, "themes.json")
+
+EFFECTS = [("glitch", "Glitch"), ("decrypt", "Decrypt"), ("scan", "Scan"), ("slide", "Slide"), ("none", "None")]
+SHADER_EFFECTS = {"glitch", "decrypt", "scan"}
+SPEEDS = [("0.5", "0.5× (slow)"), ("0.75", "0.75×"), ("1.0", "1× (normal)"), ("1.5", "1.5×"), ("2.0", "2×"),
+          ("3.0", "3× (very fast)")]
+INTENSITIES = [("0.5", "Subtle"), ("1.0", "Normal"), ("1.5", "Strong"), ("2.0", "Over the top")]
+BANDS = [("8", "Few (8)"), ("14", "Normal (14)"), ("24", "Many (24)"), ("40", "Dense (40)")]
 
 
-def read_kwin(key, default):
+def read_kwin(group, key, default):
     cp = configparser.ConfigParser(interpolation=None, strict=False)
     cp.optionxform = str
     try:
         cp.read(KWINRC)
-        return cp.get("Effect-claudio_reveal", key, fallback=default)
+        return cp.get(group, key, fallback=default)
     except (OSError, configparser.Error):
         return default
 
 
-def effect(key, default, command):
-    return {"read": lambda: read_kwin(key, default),
-            "write": lambda v: subprocess.run([EFFECT] + command + [v], stdout=subprocess.DEVNULL)}
+def reveal(key, default):
+    return read_kwin("Effect-claudio_reveal", key, default)
 
 
-SETTINGS = [
-    dict(title="Reveal effect", icon="preferences-desktop-effects", **effect("Effect", "glitch", []),
-         choices=[("glitch", "Glitch"), ("decrypt", "Decrypt"), ("scan", "Scan"),
-                  ("slide", "Slide"), ("none", "None")]),
-    dict(title="Speed", icon="speedometer", **effect("Speed", "1.0", ["speed"]),
-         choices=[("0.5", "0.5× (slow)"), ("0.75", "0.75×"), ("1.0", "1× (normal)"), ("1.5", "1.5×"),
-                  ("2.0", "2×"), ("3.0", "3× (very fast)")]),
-    dict(title="Intensity", icon="draw-brush", **effect("Intensity", "1.0", ["intensity"]),
-         choices=[("0.5", "Subtle"), ("1.0", "Normal"), ("1.5", "Strong"), ("2.0", "Over the top")]),
-    dict(title="Glitch bands", icon="view-list-details", **effect("Bands", "14", ["bands"]),
-         choices=[("8", "Few (8)"), ("14", "Normal (14)"), ("24", "Many (24)"), ("40", "Dense (40)")]),
-]
+def set_reveal(*args):
+    subprocess.run([EFFECT, *args], stdout=subprocess.DEVNULL)
+
+
+def glow_enabled():
+    return read_kwin("Plugins", "claudio-glowEnabled", "false").strip().lower() == "true"
+
+
+def set_glow(on):
+    quiet = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["kwriteconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", "claudio-glowEnabled",
+                    "true" if on else "false"], **quiet)
+    if not on:
+        subprocess.run(["qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", "claudio-glow"], **quiet)
+    subprocess.run(["qdbus6", "org.kde.KWin", "/KWin", "reconfigure"], **quiet)
+
+
+# ---- colour themes: colors.conf [glow] holds the colours in use (read by the glow and the tray icon), [custom] the
+# user's own theme. claudio-colors (the colour editor) writes the same format.
+KEYS = ("color1", "color2", "color3", "color4", "highlight")
+HEADER = """; Claudio's colours: the animated glow around the sidebar (KWin script claudio-glow), the tray icon while Claude is
+; working (claudio-tray) and the active tab. Pick a theme or make your own with the colour editor (claudio-colors, also in
+; the tray menu → Glow → Customise colours…). Changes show up by themselves within a few seconds.
+; [glow] holds the colours in use; [custom] keeps your own theme while a built-in one is selected.
+"""
+
+
+def themes():
+    try:
+        with open(THEMES) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def theme_colors(t):
+    c = list(t.get("colors", []))[:4]
+    return dict(zip(KEYS, c + [""] * (4 - len(c)) + [t.get("highlight", "")]))
+
+
+def read_conf():
+    conf = configparser.ConfigParser(interpolation=None)
+    try:
+        conf.read(COLORS if os.path.exists(COLORS) else DEFAULT_COLORS)
+    except configparser.Error:
+        pass
+    return conf
+
+
+def section(conf, name):
+    return {k: conf.get(name, k, fallback="").strip() for k in KEYS} if conf.has_section(name) else None
+
+
+def current_theme(conf):
+    t = conf.get("glow", "theme", fallback="").strip().lower()
+    if t:
+        return t
+    # colors.conf from before themes: a built-in theme if the colours match one, otherwise custom
+    glow = section(conf, "glow")
+    return next((k for k, t in themes().items() if theme_colors(t) == glow), "custom")
+
+
+def write_colors(theme, glow, custom):
+    lines = [HEADER, "[glow]", "; aurora, nebula, ember or custom", f"theme={theme}"]
+    lines += [f"{k}={glow.get(k, '')}" for k in KEYS]
+    lines += ["", "[custom]"] + [f"{k}={custom.get(k, '')}" for k in KEYS]
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with open(COLORS + ".tmp", "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(COLORS + ".tmp", COLORS)
+
+
+def set_theme(name):
+    conf = read_conf()
+    glow = section(conf, "glow") or theme_colors(themes().get("aurora", {}))
+    custom = section(conf, "custom") or glow
+    if name == "custom":
+        write_colors("custom", custom, custom)
+    elif name in themes():
+        write_colors(name, theme_colors(themes()[name]), custom)
 
 
 def same(a, b):
@@ -155,6 +232,14 @@ def same(a, b):
         return abs(float(a) - float(b)) < 1e-6
     except ValueError:
         return str(a).strip().lower() == str(b).strip().lower()
+
+
+def label_of(choices, value):
+    return next((l for v, l in choices if same(v, value)), value)
+
+
+def radios(choices, current, write):
+    return [dict(label=l, toggle=("radio", same(v, current)), action=lambda v=v: write(v)) for v, l in choices]
 
 
 MENU_PATH = "/MenuBar"
@@ -193,68 +278,80 @@ MENU_XML = """
 
 
 class Menu:
-    """Right-click menu: rebuilt from SETTINGS/actions every time it opens, so it always shows the current values."""
+    """Right-click menu. layout() returns a list of entries: None = separator, or a dict with label and optionally icon,
+    action, toggle=("radio"|"checkmark", checked), enabled=False and children=[…] for a submenu."""
 
-    def __init__(self, bus, actions):
+    def __init__(self, bus, layout):
         self.bus = bus
-        self.fixed_actions = actions      # [(label, icon, function)] at the bottom of the menu
+        self.layout = layout
         self.revision = 1
-        self.signature = None
+        self.items, self.actions = {}, {}
         self.build()
         info = Gio.DBusNodeInfo.new_for_xml(MENU_XML).interfaces[0]
         bus.register_object(MENU_PATH, info, self.method, self.property, None)
 
     def build(self):
-        # item = (id, properties, children); ids are stable as long as the structure does not change
-        self.items, self.actions, values = {}, {}, []
-        next_id = [1]
+        """Rebuilds the items (ids stay the same as long as the structure does) and returns the previous ones."""
+        old = self.items
+        self.items, self.actions, self.next_id = {}, {}, 1
+        self.items[0] = ({"children-display": "submenu"}, [self.add(e) for e in self.layout()])
+        return old
 
-        def item(props, children=(), action=None):
-            i = next_id[0]
-            next_id[0] += 1
-            self.items[i] = (props, list(children))
-            if action:
-                self.actions[i] = action
+    def add(self, e):
+        i = self.next_id
+        self.next_id += 1
+        if e is None:
+            self.items[i] = ({"type": "separator"}, [])
             return i
+        props = {"label": e["label"]}
+        if e.get("icon"):
+            props["icon-name"] = e["icon"]
+        if "toggle" in e:
+            props["toggle-type"] = e["toggle"][0]
+            props["toggle-state"] = 1 if e["toggle"][1] else 0
+        if e.get("enabled") is False:
+            props["enabled"] = False
+        if "children" in e:
+            props["children-display"] = "submenu"
+        if e.get("action"):
+            self.actions[i] = e["action"]
+        self.items[i] = (props, [])
+        self.items[i][1].extend(self.add(c) for c in e.get("children", []))
+        return i
 
-        root = []
-        for s in SETTINGS:
-            current = s["read"]()
-            values.append(current)
-            children = []
-            for value, label in s["choices"]:
-                children.append(item({"label": label, "toggle-type": "radio",
-                                      "toggle-state": 1 if same(value, current) else 0},
-                                     action=lambda s=s, value=value: s["write"](value)))
-            name = next((l for v, l in s["choices"] if same(v, current)), current)
-            root.append(item({"label": f"{s['title']}: {name}", "icon-name": s.get("icon", ""),
-                              "children-display": "submenu"}, children))
-        root.append(item({"type": "separator"}))
-        for label, icon, function in self.fixed_actions:
-            root.append(item({"label": label, "icon-name": icon}, action=function))
-        self.items[0] = ({"children-display": "submenu"}, root)
-        self.signature = tuple(values)
+    @staticmethod
+    def props_variant(props):
+        return {k: GLib.Variant("b" if isinstance(v, bool) else "i" if isinstance(v, int) else "s", v)
+                for k, v in props.items()}
 
     def variant(self, i, depth):
         props, children = self.items[i]
-        pv = {k: GLib.Variant("i" if isinstance(v, int) else "s", v) for k, v in props.items()}
         sub = [GLib.Variant("(ia{sv}av)", self.variant(c, depth - 1)) for c in children] if depth != 0 else []
-        return (i, pv, sub)
+        return (i, self.props_variant(props), sub)
 
     def refresh(self):
-        """Rebuilds; if the values changed, tells the panel. Returns True if anything changed."""
-        before = self.signature
-        self.build()
-        if self.signature == before:
-            return False
-        self.revision += 1
-        self.bus.emit_signal(None, MENU_PATH, "com.canonical.dbusmenu", "LayoutUpdated",
-                             GLib.Variant("(ui)", (self.revision, 0)))
-        return True
+        """Rebuilds and tells the panel what changed. Returns True if anything did."""
+        old = self.build()
+        if {i: c for i, (_, c) in old.items()} != {i: c for i, (_, c) in self.items.items()}:
+            self.revision += 1
+            self.bus.emit_signal(None, MENU_PATH, "com.canonical.dbusmenu", "LayoutUpdated",
+                                 GLib.Variant("(ui)", (self.revision, 0)))
+            return True
+        changed = [(i, self.props_variant(p)) for i, (p, _) in self.items.items() if old[i][0] != p]
+        if changed:
+            # every item whose label, tick or state changed, including the radio that is no longer selected
+            self.bus.emit_signal(None, MENU_PATH, "com.canonical.dbusmenu", "ItemsPropertiesUpdated",
+                                 GLib.Variant("(a(ia{sv})a(ias))", (changed, [])))
+        return bool(changed)
 
     def property(self, conn, sender, path, iface, name):
         return {"Version": GLib.Variant("u", 3), "TextDirection": GLib.Variant("s", "ltr"),
                 "Status": GLib.Variant("s", "normal"), "IconThemePath": GLib.Variant("as", [])}.get(name)
+
+    def clicked(self, i):
+        if i in self.actions:
+            self.actions[i]()
+            GLib.idle_add(self.refresh)
 
     def method(self, conn, sender, path, iface, name, param, inv):
         a = param.unpack()
@@ -269,20 +366,19 @@ class Menu:
             inv.return_value(GLib.Variant("(v)", (v if v is not None else GLib.Variant("s", ""),)))
         elif name == "Event":
             inv.return_value(None)
-            if a[1] == "clicked" and a[0] in self.actions:
-                self.actions[a[0]]()
-                GLib.idle_add(self.refresh)
+            if a[1] == "clicked":
+                self.clicked(a[0])
         elif name == "EventGroup":
-            for i, event, _d, _t in a[0]:
-                if event == "clicked" and i in self.actions:
-                    self.actions[i]()
-            GLib.idle_add(self.refresh)
             inv.return_value(GLib.Variant("(ai)", ([],)))
+            for i, event, _d, _t in a[0]:
+                if event == "clicked":
+                    self.clicked(i)
         elif name == "AboutToShow":
-            inv.return_value(GLib.Variant("(b)", (self.refresh(),)))
+            self.refresh()
+            inv.return_value(GLib.Variant("(b)", (True,)))     # always refetch: see the comment at the top
         elif name == "AboutToShowGroup":
             self.refresh()
-            inv.return_value(GLib.Variant("(aiai)", ([], [])))
+            inv.return_value(GLib.Variant("(aiai)", ([i for i in a[0] if i in self.items], [])))
         else:
             inv.return_value(None)
 
@@ -516,13 +612,6 @@ def description(data):
     return "\n".join(lines)
 
 
-def edit_colors():
-    if not os.path.exists(COLORS):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        shutil.copy(DEFAULT_COLORS, COLORS)
-    subprocess.Popen(["xdg-open", COLORS])
-
-
 class Tray:
     def __init__(self):
         self.data, self.perc = read_usage()
@@ -535,11 +624,7 @@ class Tray:
         self.colors = read_colors()
         color_tabs(self.colors)
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
-        self.menu = Menu(self.bus, [
-            ("Show/hide Claudio", "view-right-new", lambda: subprocess.Popen([TOGGLE])),
-            ("Usage details", "dialog-information", self.notify),
-            ("Edit glow colours…", "color-management", edit_colors),
-        ])
+        self.menu = Menu(self.bus, self.menu_layout)
         self.name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
         info = Gio.DBusNodeInfo.new_for_xml(SNI_XML).interfaces[0]
         self.bus.register_object(SNI_PATH, info, self.method, self.property, None)
@@ -554,6 +639,37 @@ class Tray:
         os.makedirs(CONFIG_DIR, exist_ok=True)
         self.color_monitor = Gio.File.new_for_path(CONFIG_DIR).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
         self.color_monitor.connect("changed", lambda *a: self.update())
+
+    def menu_layout(self):
+        effect = reveal("Effect", "glitch").strip().lower()
+        speed, intensity, bands = reveal("Speed", "1.0"), reveal("Intensity", "1.0"), reveal("Bands", "14")
+        glow_on = glow_enabled()
+        theme = current_theme(read_conf())
+        theme_choices = [(k, t.get("name", k)) for k, t in themes().items()] + [("custom", "Custom")]
+        return [
+            dict(label="Show/hide Claudio", icon="view-right-new", action=lambda: subprocess.Popen([TOGGLE])),
+            dict(label="Usage details", icon="dialog-information", action=self.notify),
+            None,
+            dict(label=f"Reveal animation: {label_of(EFFECTS, effect)}", icon="preferences-desktop-effects", children=[
+                *radios(EFFECTS, effect, set_reveal),
+                None,
+                dict(label=f"Speed: {label_of(SPEEDS, speed)}", icon="speedometer", enabled=effect != "none",
+                     children=radios(SPEEDS, speed, lambda v: set_reveal("speed", v))),
+                dict(label=f"Intensity: {label_of(INTENSITIES, intensity)}", icon="draw-brush",
+                     enabled=effect in SHADER_EFFECTS,
+                     children=radios(INTENSITIES, intensity, lambda v: set_reveal("intensity", v))),
+                dict(label=f"Glitch bands: {label_of(BANDS, bands)}", icon="view-list-details", enabled=effect == "glitch",
+                     children=radios(BANDS, bands, lambda v: set_reveal("bands", v))),
+            ]),
+            dict(label="Glow: " + (label_of(theme_choices, theme) if glow_on else "off"), icon="color-management", children=[
+                dict(label="Glow around Claudio", toggle=("checkmark", glow_on), action=lambda: set_glow(not glow_on)),
+                None,
+                *radios(theme_choices, theme, set_theme),
+                None,
+                dict(label="Customise colours…", icon="preferences-desktop-color",
+                     action=lambda: subprocess.Popen([COLOR_EDITOR])),
+            ]),
+        ]
 
     def register(self):
         self.bus.call(WATCHER, "/StatusNotifierWatcher", WATCHER, "RegisterStatusNotifierItem",

@@ -77,10 +77,19 @@ Speed, intensity and the number of glitch bands are adjustable too.
 |---|---|
 | Left click | show/hide Claudio |
 | Middle click | notification with session and weekly usage, and which chats are working |
-| Right click | settings: reveal effect, speed, intensity, glitch bands, glow colours |
+| Right click | menu: show/hide, usage details, **Reveal animation** (effect, speed, intensity, glitch bands) and **Glow** (on/off, theme, colour editor) |
 | Hover | the same details as a tooltip |
 
 The ring is green, then amber from 70% and red from 90%; the small number below is the minutes until the 5-hour window resets.
+
+## Colours and themes
+
+<div align="center"><img src="docs/screenshots/colour-editor.png" width="520" alt="Claudio's colour editor: live glow preview, Aurora, Nebula, Ember and Custom themes, and the custom colours"></div>
+
+The glow, the pulsing tray icon and the active tab share one palette. Pick a built-in theme, **Aurora**, **Nebula** or
+**Ember**, straight from the tray menu (*Glow → …*), or open the colour editor (*Glow → Customise colours…* or
+`claudio-colors`) to make your own: 2 to 4 colours plus an optional highlight that sweeps round the glow. The preview at the
+top is drawn by the same shader as the real glow, and every change is applied live.
 
 ## Requirements
 
@@ -141,7 +150,7 @@ Keep in mind that membership of `input` lets any program you run read keyboard i
 
 | File | What |
 |---|---|
-| `~/.config/claudio/colors.conf` | glow, tray and active-tab colours (2–4 colours plus an optional highlight); picked up live |
+| `~/.config/claudio/colors.conf` | glow, tray and active-tab colours: the theme in use and your custom one (easier with `claudio-colors`); picked up live |
 | `~/.config/claudio/ghostty.conf` | your Ghostty overrides for Claudio only: size, opacity, font… |
 | `kwinrc` → `[Effect-claudio_reveal]` | reveal effect settings (use `claudio-effect` or the tray menu) |
 
@@ -173,6 +182,7 @@ $ claudio-effect decrypt && claudio-effect speed 1.5
 | `claudio-statusline` | Claude Code status line; saves the usage limits to `~/.cache/claudio/usage.json` |
 | `claudio-hook` | Claude Code hook; tracks which Claudio chats are working, notifies when long jobs finish |
 | `claudio-tray` | StatusNotifierItem tray icon with a dbusmenu settings menu |
+| `claudio-colors` | colour editor (QML), with a live preview of the glow |
 | `claudio-toggle` | shows/hides Claudio through KDE's global shortcut, starting it if needed |
 | `claudio-copilot-key` | turns Copilot key presses into `claudio-toggle` |
 

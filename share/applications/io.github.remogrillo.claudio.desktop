@@ -11,8 +11,12 @@ Categories=Utility;Development;
 StartupNotify=false
 X-GNOME-UsesNotifications=true
 OnlyShowIn=KDE;
-Actions=toggle;
+Actions=toggle;colors;
 
 [Desktop Action toggle]
 Name=Show/hide Claudio
 Exec=claudio-toggle
+
+[Desktop Action colors]
+Name=Claudio colours
+Exec=claudio-colors

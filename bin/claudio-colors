@@ -1,0 +1,10 @@
+#!/bin/bash
+# Claudio's colour editor: built-in themes or your own, with a live preview of the glow. Writes ~/.config/claudio/colors.conf.
+here=$(dirname "$(readlink -f "$0")")
+share=$(readlink -f "$here/../share/claudio")
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/claudio/colors.conf"
+mkdir -p "$(dirname "$conf")"
+[ -f "$conf" ] || cp "$share/colors.conf" "$conf"
+export QML_XHR_ALLOW_FILE_READ=1 QML_XHR_ALLOW_FILE_WRITE=1
+export QT_QUICK_CONTROLS_STYLE=Fusion
+exec qml6 -a widget "$share/colors/ColorEditor.qml" -- "$conf" "$share/colors.conf" "$share/themes.json" "${conf/#$HOME/\~}"
