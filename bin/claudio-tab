@@ -1,0 +1,11 @@
+#!/bin/bash
+# Runs Claude Code in a Claudio tab, titled "New chat" until Claude Code gives the conversation its own title.
+unset LD_PRELOAD   # set by claudio for Ghostty only
+export PATH="$PATH:$HOME/.local/bin"   # where Claude Code's native installer puts `claude`
+printf '\e]0;New chat\a'
+if ! command -v claude >/dev/null; then
+    echo "Claude Code is not installed: see https://code.claude.com/docs/en/setup"
+    read -rp "Press Enter to close this tab."
+    exit 1
+fi
+exec claude "$@"

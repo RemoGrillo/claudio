@@ -1,0 +1,13 @@
+post_install() {
+  echo ">>> Claudio is installed. As your own user (not root), run once:"
+  echo ">>>     claudio-setup"
+  echo ">>> It enables the KWin effect and glow, the autostart entries and the Claude Code hooks."
+}
+
+post_upgrade() {
+  echo ">>> Claudio updated. If something looks off, run claudio-setup again (it is safe to repeat)."
+}
+
+pre_remove() {
+  echo ">>> Before removing Claudio, run 'claudio-setup --remove' as each user that set it up."
+}

@@ -1,0 +1,19 @@
+#!/bin/bash
+# Starts Claudio: a dedicated Ghostty instance that stays in the background and shows Claude Code in a quick
+# terminal docked to the right edge of the screen. noslide.so (LD_PRELOAD, this Ghostty only) hides KWin's slide
+# protocol from it, so the reveal animation is drawn by the claudio_reveal KWin effect instead (see claudio-effect).
+here=$(dirname "$(readlink -f "$0")")
+share=$(readlink -f "$here/../share/claudio")
+noslide=$(readlink -f "$here/../lib/claudio/noslide.so")
+[ -f "$noslide" ] || noslide="$here/../noslide/noslide.so"   # running from a source checkout
+[ -f "$noslide" ] && export LD_PRELOAD="$noslide${LD_PRELOAD:+:$LD_PRELOAD}"
+
+# active-tab colours, generated from colors.conf by claudio-tray (must exist before Ghostty reads it)
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/claudio"
+mkdir -p "$cache"
+[ -f "$cache/tabs.css" ] || : > "$cache/tabs.css"
+
+exec ghostty --config-file="$share/ghostty/claudio.conf" \
+    --command="$here/claudio-tab" \
+    --gtk-custom-css="$share/ghostty/claudio.css" \
+    --gtk-custom-css="$cache/tabs.css" "$@"

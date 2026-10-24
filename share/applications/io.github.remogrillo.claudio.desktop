@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Claudio
+GenericName=Claude Code sidebar
+Comment=Claude Code in a sidebar that slides out of the edge of the screen
+Keywords=Claude;Claudio;sidebar;AI;assistant;
+Icon=io.github.remogrillo.claudio
+Exec=claudio
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false
+X-GNOME-UsesNotifications=true
+OnlyShowIn=KDE;
+Actions=toggle;
+
+[Desktop Action toggle]
+Name=Show/hide Claudio
+Exec=claudio-toggle

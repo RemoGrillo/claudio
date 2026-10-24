@@ -1,0 +1,7 @@
+noslide/noslide.so
+share/kwin/effects/claudio_reveal/contents/shaders/*.frag
+share/kwin/scripts/claudio-glow/contents/ui/glow.frag.qsb
+__pycache__/
+/pkg/
+/src/
+*.pkg.tar.*

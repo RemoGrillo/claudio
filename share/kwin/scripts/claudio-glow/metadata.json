@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Id": "claudio-glow",
+        "Name": "Claudio glow",
+        "Description": "Soft animated glow around the Claudio sidebar while it is open, in the colours of ~/.config/claudio/colors.conf",
+        "Authors": [ { "Name": "Remo Grillo" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/RemoGrillo/claudio",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "KPackageStructure": "KWin/Script"
+}

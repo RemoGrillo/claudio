@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""Sets Claudio up for the current user, or undoes it.
+
+  claudio-setup               colors.conf, KWin effect and glow script, autostart, Claude Code status line and hooks
+  claudio-setup --statusline  same, and replace an existing Claude Code status line with Claudio's
+  claudio-setup --remove      undo all of the above (~/.config/claudio is kept)
+
+It is safe to run again, e.g. after an update.
+"""
+import glob
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+APP = "io.github.remogrillo.claudio"
+HERE = os.path.dirname(os.path.realpath(__file__))
+SHARE = os.path.realpath(os.path.join(HERE, "..", "share"))
+HOME = os.path.expanduser("~")
+CONFIG = os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config")
+DATA = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
+DATA_DIRS = [DATA] + (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":")
+CLAUDE_SETTINGS = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude"), "settings.json")
+# installed by a package (or make install) rather than run from a source checkout
+SYSTEM = any(os.path.realpath(d) == SHARE for d in DATA_DIRS[1:])
+
+KWIN = [("effects", "claudio_reveal"), ("scripts", "claudio-glow")]
+HOOKS = {"UserPromptSubmit": "busy", "PreToolUse": "busy", "PostToolUse": "busy", "Stop": "idle",
+         "StopFailure": "idle", "Notification": "idle", "SessionStart": "idle", "SessionEnd": "idle"}
+AUTOSTART = {
+    f"{APP}.desktop": ("Claudio", "claudio", "Starts Claudio in the background"),
+    "claudio-tray.desktop": ("Claudio tray icon", "claudio-tray", "Claude usage in the tray, Claudio's button"),
+    "claudio-copilot-key.desktop": ("Claudio Copilot key", "claudio-copilot-key", "Opens Claudio with the Copilot key"),
+}
+
+
+def say(msg):
+    print(f"  {msg}")
+
+
+def run(*cmd):
+    return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def desktop_entry(name, command, comment, hidden=False):
+    # the tray icon works in any StatusNotifierItem tray; everything else needs KDE
+    return ("[Desktop Entry]\nType=Application\n"
+            f"Name={name}\nComment={comment}\nIcon={APP}\nExec={os.path.join(HERE, command)}\n"
+            "Terminal=false\nStartupNotify=false\n" + ("" if command == "claudio-tray" else "OnlyShowIn=KDE;\n")
+            + ("NoDisplay=true\n" if hidden else ""))
+
+
+def write(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(text)
+
+
+def link(target, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.islink(path):
+        os.remove(path)
+    if not os.path.exists(path):
+        os.symlink(target, path)
+
+
+def remove(path):
+    if os.path.islink(path) or os.path.isfile(path):
+        os.remove(path)
+        return True
+    return False
+
+
+def keyboards_readable():
+    kbds = glob.glob("/dev/input/by-path/*-event-kbd")
+    return bool(kbds) and all(os.access(k, os.R_OK) for k in kbds)
+
+
+# ---- pieces ----
+
+def setup_config():
+    colors = os.path.join(CONFIG, "claudio", "colors.conf")
+    if not os.path.exists(colors):
+        os.makedirs(os.path.dirname(colors), exist_ok=True)
+        shutil.copy(os.path.join(SHARE, "claudio", "colors.conf"), colors)
+        say(f"colours: {colors}")
+
+
+def setup_kwin(enable):
+    for kind, name in KWIN:
+        local = os.path.join(DATA, "kwin", kind, name)
+        if enable and not SYSTEM:
+            link(os.path.join(SHARE, "kwin", kind, name), local)
+        elif not enable and os.path.islink(local):
+            os.remove(local)
+        run("kwriteconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", f"{name}Enabled",
+            "true" if enable else "false")
+    run("qdbus6", "org.kde.KWin", "/KWin", "reconfigure")
+    run("qdbus6", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects." + ("loadEffect" if enable else "unloadEffect"),
+        "claudio_reveal")
+    say(("enabled" if enable else "disabled") + " the KWin effect claudio_reveal and the KWin script claudio-glow")
+
+
+def setup_desktop(enable):
+    # from a source checkout the launcher and the icon must be visible to KDE (and to the shortcuts portal)
+    if SYSTEM:
+        pass
+    elif enable:
+        write(os.path.join(DATA, "applications", f"{APP}.desktop"),
+              desktop_entry("Claudio", "claudio", "Claude Code in a sidebar"))
+        link(os.path.join(SHARE, "icons", "hicolor", "scalable", "apps", f"{APP}.svg"),
+             os.path.join(DATA, "icons", "hicolor", "scalable", "apps", f"{APP}.svg"))
+    else:
+        remove(os.path.join(DATA, "applications", f"{APP}.desktop"))
+        remove(os.path.join(DATA, "icons", "hicolor", "scalable", "apps", f"{APP}.svg"))
+
+    for file, (name, command, comment) in AUTOSTART.items():
+        path = os.path.join(CONFIG, "autostart", file)
+        if not enable:
+            remove(path)
+        elif command == "claudio-copilot-key" and not keyboards_readable():
+            remove(path)
+            say("Copilot key: skipped, your user cannot read the keyboards. To use it:")
+            say("  sudo usermod -aG input $USER   (then log in again and rerun claudio-setup)")
+        else:
+            write(path, desktop_entry(name, command, comment, hidden=True))
+    say(("added" if enable else "removed") + " the autostart entries")
+
+
+def setup_claude(enable, force_statusline=False):
+    try:
+        with open(CLAUDE_SETTINGS) as f:
+            settings = json.load(f)
+    except FileNotFoundError:
+        settings = {}
+    except ValueError:
+        say(f"{CLAUDE_SETTINGS} is not valid JSON: Claude Code hooks and status line left alone")
+        return
+    before = json.dumps(settings, sort_keys=True)
+
+    ours = lambda cmd: "claudio-hook" in cmd or "claudio-statusline" in cmd
+    hooks = settings.get("hooks") or {}
+    for event in list(hooks):
+        groups = [g for g in hooks[event] if not any(ours(h.get("command", "")) for h in g.get("hooks", []))]
+        if groups:
+            hooks[event] = groups
+        else:
+            del hooks[event]
+    status = settings.get("statusLine") or {}
+    if enable:
+        # still harmless if Claudio is uninstalled without running --remove first
+        hook = os.path.join(HERE, "claudio-hook")
+        for event, state in HOOKS.items():
+            hooks.setdefault(event, []).append(
+                {"hooks": [{"type": "command", "command": f"[ -x {hook} ] && {hook} {state} || true", "timeout": 5}]})
+        if not status or ours(status.get("command", "")) or force_statusline:
+            settings["statusLine"] = {"type": "command", "command": os.path.join(HERE, "claudio-statusline")}
+        else:
+            say("Claude Code already has a status line: kept. The tray icon needs Claudio's to show the usage;")
+            say("  run claudio-setup --statusline to replace it")
+    elif ours(status.get("command", "")):
+        del settings["statusLine"]
+    if hooks:
+        settings["hooks"] = hooks
+    else:
+        settings.pop("hooks", None)
+
+    if json.dumps(settings, sort_keys=True) == before:
+        return
+    if os.path.exists(CLAUDE_SETTINGS):
+        shutil.copy(CLAUDE_SETTINGS, CLAUDE_SETTINGS + ".bak-claudio")
+    write(CLAUDE_SETTINGS, json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+    say(("added" if enable else "removed") + f" Claudio's hooks and status line in {CLAUDE_SETTINGS}")
+
+
+def main():
+    args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args) or not set(args) <= {"--remove", "--statusline"}:
+        print(__doc__.strip())
+        return
+    if "--remove" in args:
+        print("Removing Claudio for this user:")
+        setup_kwin(False)
+        setup_desktop(False)
+        setup_claude(False)
+        run("pkill", "-f", "ghostty --config-file=.*claudio.conf")
+        print("Done. Your colours and overrides are still in ~/.config/claudio.")
+        return
+    print("Setting up Claudio for this user:")
+    setup_config()
+    setup_kwin(True)
+    setup_desktop(True)
+    setup_claude(True, "--statusline" in args)
+    toggle = "claudio-toggle" if SYSTEM else os.path.join(HERE, "claudio-toggle")
+    print(f"Done. Start it now with: {toggle}   (or press Meta+C after logging in again)")
+    print("The first time, KDE asks you to confirm Claudio's global shortcut.")
+
+
+if __name__ == "__main__":
+    main()

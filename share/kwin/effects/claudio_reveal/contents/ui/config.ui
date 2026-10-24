@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RevealConfig</class>
+ <widget class="QWidget" name="RevealConfig">
+  <layout class="QFormLayout" name="layout">
+   <item row="0" column="0"><widget class="QLabel" name="l0"><property name="text"><string>Effect (glitch, decrypt, scan, slide, none):</string></property></widget></item>
+   <item row="0" column="1"><widget class="QLineEdit" name="kcfg_Effect"/></item>
+   <item row="1" column="0"><widget class="QLabel" name="l1"><property name="text"><string>Speed (2 = twice as fast):</string></property></widget></item>
+   <item row="1" column="1"><widget class="QDoubleSpinBox" name="kcfg_Speed"><property name="minimum"><double>0.1</double></property><property name="maximum"><double>5.0</double></property><property name="singleStep"><double>0.1</double></property></widget></item>
+   <item row="2" column="0"><widget class="QLabel" name="l2"><property name="text"><string>Show duration (ms, 0 = automatic):</string></property></widget></item>
+   <item row="2" column="1"><widget class="QSpinBox" name="kcfg_DurationIn"><property name="maximum"><number>3000</number></property></widget></item>
+   <item row="3" column="0"><widget class="QLabel" name="l3"><property name="text"><string>Hide duration (ms, 0 = automatic):</string></property></widget></item>
+   <item row="3" column="1"><widget class="QSpinBox" name="kcfg_DurationOut"><property name="maximum"><number>3000</number></property></widget></item>
+   <item row="4" column="0"><widget class="QLabel" name="l4"><property name="text"><string>Glitch bands:</string></property></widget></item>
+   <item row="4" column="1"><widget class="QSpinBox" name="kcfg_Bands"><property name="minimum"><number>2</number></property><property name="maximum"><number>80</number></property></widget></item>
+   <item row="5" column="0"><widget class="QLabel" name="l5"><property name="text"><string>Intensity (glitch, decrypt, scan):</string></property></widget></item>
+   <item row="5" column="1"><widget class="QDoubleSpinBox" name="kcfg_Intensity"><property name="maximum"><double>3.0</double></property><property name="singleStep"><double>0.1</double></property></widget></item>
+  </layout>
+ </widget>
+</ui>

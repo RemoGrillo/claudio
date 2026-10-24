@@ -1,0 +1,31 @@
+#!/bin/bash
+# Chooses how Claudio appears and disappears (KWin effect claudio_reveal).
+#   claudio-effect                       show the current settings
+#   claudio-effect glitch|decrypt|scan|slide|none
+#   claudio-effect speed 1.5             faster (2 = twice as fast, 0.5 = half) for every effect
+#   claudio-effect duration 300 [200]    fixed show [and hide] duration in ms; "duration auto" removes it
+#   claudio-effect bands 14              number of glitch bands
+#   claudio-effect intensity 1.0         strength of glitch, decrypt and scan
+#   claudio-effect reload                reload the effect (after editing its shaders or code)
+G=Effect-claudio_reveal
+write() { kwriteconfig6 --file kwinrc --group $G --key "$1" "$2"; }
+read_() { kreadconfig6 --file kwinrc --group $G --key "$1" --default "$2"; }
+reload() {
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect claudio_reveal >/dev/null
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect claudio_reveal >/dev/null
+}
+case "$1" in
+    "") echo "effect=$(read_ Effect glitch) speed=$(read_ Speed 1.0)" \
+             "duration=$(read_ DurationIn 0)/$(read_ DurationOut 0) ms (0 = auto)" \
+             "bands=$(read_ Bands 14) intensity=$(read_ Intensity 1.0)"; exit ;;
+    glitch|decrypt|scan|slide|none) write Effect "$1" ;;
+    speed) write Speed "$2" ;;
+    duration) if [ "$2" = auto ]; then write DurationIn 0; write DurationOut 0
+              else write DurationIn "$2"; write DurationOut "${3:-$2}"; fi ;;
+    bands) write Bands "$2" ;;
+    intensity) write Intensity "$2" ;;
+    reload) reload; exit ;;
+    *) sed -n '2,9p' "$0" | sed 's/^# \?//'; exit 1 ;;
+esac
+qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.reconfigureEffect claudio_reveal >/dev/null
+"$0"

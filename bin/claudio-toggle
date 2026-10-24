@@ -1,0 +1,28 @@
+#!/bin/bash
+# Shows/hides Claudio. If its Ghostty instance is not running yet, starts it through its desktop file (KIO runs it
+# in its own app scope, so the global-shortcuts portal recognises the app) and then opens it.
+APP=io.github.remogrillo.claudio
+here=$(dirname "$(readlink -f "$0")")
+
+running() {
+    gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+        --method org.freedesktop.DBus.NameHasOwner "$APP" 2>/dev/null | grep -q true
+}
+
+desktop_file() {
+    local IFS=:
+    for d in "${XDG_DATA_HOME:-$HOME/.local/share}" ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do
+        [ -f "$d/applications/$APP.desktop" ] && { echo "$d/applications/$APP.desktop"; return; }
+    done
+}
+
+if ! running; then
+    if f=$(desktop_file) && [ -n "$f" ]; then
+        kioclient exec "$f" >/dev/null 2>&1
+    else
+        setsid -f "$here/claudio" >/dev/null 2>&1
+    fi
+    for _ in $(seq 20); do running && break; sleep 0.25; done
+    sleep 0.5
+fi
+qdbus6 org.kde.kglobalaccel "/component/${APP//./_}" org.kde.kglobalaccel.Component.invokeShortcut "LOGO+c"
