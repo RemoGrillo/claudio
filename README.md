@@ -13,7 +13,7 @@ One key and it glitches into view at the right edge of your screen, over whateve
 ![Ghostty](https://img.shields.io/badge/terminal-Ghostty-3551f3)
 ![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
 
-<!-- screenshot to add: <img src="docs/screenshots/hero.png" alt="Claudio open on the right edge of a KDE Plasma desktop, with its coloured glow" width="100%"> -->
+<img src="docs/screenshots/hero.png" alt="Claudio open on the right edge of a KDE Plasma desktop, with its coloured glow" width="100%">
 
 </div>
 
@@ -35,15 +35,16 @@ No network calls of its own, no API keys: usage figures come from the data Claud
 
 ## Reveal effects
 
-| Effect | |
-|---|---|
-| **glitch** | the window arrives in horizontal bands that jerk into place, with RGB split, flicker and scanlines |
-| **decrypt** | a grid of green glyphs keeps changing, then resolves into the terminal from top to bottom |
-| **scan** | a cyan line sweeps across a blurred hologram, leaving the sharp window behind it |
-| **slide** | a clean slide in from the edge of the screen |
-| **none** | just appears |
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/glitch.gif" alt="Glitch reveal effect"><br><b>glitch</b><br><sub>bands jerk into place with RGB split, flicker and scanlines</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/decrypt.gif" alt="Decrypt reveal effect"><br><b>decrypt</b><br><sub>green glyphs churn, then resolve into the terminal top to bottom</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/scan.gif" alt="Scan reveal effect"><br><b>scan</b><br><sub>a cyan line sweeps across a blurred hologram</sub></td>
+  </tr>
+</table>
 
-<!-- screenshots to add: docs/screenshots/{glitch,decrypt,scan}.png and docs/screenshots/reveal.gif -->
+<sub>Recorded slowed down so you can see what happens; the real thing takes 0.3 to 0.65 seconds
+(adjustable). There are also <b>slide</b>, a clean slide in from the edge, and <b>none</b>.</sub>
 
 Pick one from the tray menu, with `claudio-effect glitch|decrypt|scan|slide|none`,
 or in *System Settings → Window Management → Desktop Effects → Claudio reveal*.
