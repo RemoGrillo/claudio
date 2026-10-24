@@ -13,7 +13,7 @@ optdepends=('claude-code: the Claude Code CLI (or install it with the official n
             'kwin-effects-better-blur-dx: stronger frosted-glass blur behind the sidebar')
 install=claudio.install
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('a3136102fa4fa7eb8978802f7eac27857baae9f76cb25cae55cd379a0ef864a7')
 
 build() {
   cd "$pkgname-$pkgver"
