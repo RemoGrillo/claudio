@@ -14,7 +14,7 @@ over whatever you're doing, on every virtual desktop. Press it again and it's go
 ![Ghostty](https://img.shields.io/badge/terminal-Ghostty-3551f3)
 ![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)
 
-<img src="docs/screenshots/hero.png" alt="Claudio open on the right edge of a KDE Plasma desktop, with its coloured glow" width="100%">
+<img src="docs/screenshots/hero.png" alt="Claudio open on the right edge of a KDE Plasma desktop, with its coloured glow and a close-up of the usage tray icon" width="100%">
 
 </div>
 
