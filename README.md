@@ -40,7 +40,7 @@ working and pings you when a long job is done.
   not a terminal that wandered in.
 - **Reveal effects.** A KWin effect draws how it appears and disappears: **glitch**, **decrypt**, **scan**, a plain **slide**, or nothing.
 - **Usage at a glance.** A tray icon shows how much of your 5-hour Claude window you've used and the minutes until it resets,
-  and pulses while Claude is working.
+  and its usage arc glows and flashes in your theme's colours while Claude is working.
 
 Under the hood it's a [Ghostty](https://ghostty.org) quick terminal running Claude Code, with a KWin effect, a KWin script and a
 small tray app around it. Made on Arch Linux, for any distro with Plasma 6 on Wayland.
